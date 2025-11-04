@@ -36,13 +36,9 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
             log.info("Recibida solicitud para la URL {}", exchange.getRequest().getURI());
 
             // Verificar si la ruta está excluida del filtro de autenticación
-            if (config.getExcludePaths() != null) {
-                for (String excludePath : config.getExcludePaths()) {
-                    if (PathMatcher.matches(requestPath, excludePath)) {
-                        log.info("Ruta excluida del filtro de autenticación: {}", requestPath);
-                        return chain.filter(exchange);
-                    }
-                }
+            if (isPathExcluded(requestPath, config)) {
+                log.info("Ruta excluida del filtro de autenticación: {}", requestPath);
+                return chain.filter(exchange);
             }
 
             //Lee cookie automatica del navegador
@@ -60,14 +56,12 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
             String encodedSessionId = sessionCookie.getValue();
             log.info("SessionId codificado encontrado en cookie: {}", encodedSessionId);
 
-            // Spring Session codifica el sessionId en Base64 para la cookie
             String sessionId;
             try {
-                sessionId = new String(Base64.getDecoder().decode(encodedSessionId));
+                sessionId = decodeSessionId(encodedSessionId);
                 log.info("SessionId decodificado: {}", sessionId);
-            } catch (Exception e) {
-                log.warn("Error al decodificar sessionId: {}", e.getMessage());
-                return unauthorizedResponse(requestPath,exchange, AuthenticationConstants.MSG_SESSION_INVALID);
+            } catch (IllegalArgumentException e) {
+                return unauthorizedResponse(requestPath, exchange, AuthenticationConstants.MSG_SESSION_INVALID);
             }
 
             // Buscamos en Redis con el prefijo de Spring Session
@@ -78,13 +72,13 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
                     .switchIfEmpty(Mono.error(new RuntimeException("AccessToken no encontrado en sesión")))
                     .flatMap(accessTokenObj -> {
                         String accessToken = JsonStringCleaner.removeQuotes(accessTokenObj.toString());
-                        final String finalAccessToken = accessToken;
 
-                        if (finalAccessToken == null || finalAccessToken.trim().isEmpty() || !finalAccessToken.startsWith(AuthenticationConstants.GOOGLE_TOKEN_PREFIX)) {
-                            log.warn("AccessToken no válido en la sesión Redis. Token: {}", finalAccessToken);
-                            return unauthorizedResponse(requestPath,exchange, AuthenticationConstants.MSG_TOKEN_INVALID);
+                        if (!isValidAccessToken(accessToken)) {
+                            log.warn("AccessToken no válido en la sesión Redis. Token: {}", accessToken);
+                            return unauthorizedResponse(requestPath, exchange, AuthenticationConstants.MSG_TOKEN_INVALID);
                         }
 
+                        final String finalAccessToken = accessToken;
                         log.info("AccessToken limpio extraído: {}", finalAccessToken.length() > 20 ? finalAccessToken.substring(0, 20) + "..." : finalAccessToken);
 
                         return redisTemplate.opsForHash()
@@ -121,6 +115,33 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
             ? HttpStatus.FORBIDDEN
             : HttpStatus.UNAUTHORIZED;
         return ErrorResponseBuilder.buildErrorResponse(exchange.getResponse(), status, message);
+    }
+
+    private boolean isPathExcluded(String requestPath, Config config) {
+        if (config.excludePaths() == null) {
+            return false;
+        }
+        for (String excludePath : config.excludePaths()) {
+            if (PathMatcher.matches(requestPath, excludePath)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String decodeSessionId(String encodedSessionId) {
+        try {
+            return new String(Base64.getDecoder().decode(encodedSessionId));
+        } catch (Exception e) {
+            log.warn("Error al decodificar sessionId: {}", e.getMessage());
+            throw new IllegalArgumentException("Invalid session ID encoding", e);
+        }
+    }
+
+    private boolean isValidAccessToken(String accessToken) {
+        return accessToken != null &&
+               !accessToken.trim().isEmpty() &&
+               accessToken.startsWith(AuthenticationConstants.GOOGLE_TOKEN_PREFIX);
     }
 
     public record Config(List<String> excludePaths) {
