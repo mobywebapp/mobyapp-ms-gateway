@@ -141,3 +141,7 @@ spring:
 cookie:
   secure: ${COOKIE_SECURE:false}
   same-site: ${COOKIE_SAME_SITE:Lax}
+
+# Fallback and error redirect configuration
+fallback:
+  redirect-url: ${FALLBACK_REDIRECT_URL:http://localhost:9000}
