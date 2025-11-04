@@ -1,6 +1,7 @@
 package com.microservicios.api_gateway.config;
 
 import com.microservicios.api_gateway.constants.AuthenticationConstants;
+import com.microservicios.api_gateway.util.JsonStringCleaner;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
@@ -74,12 +75,7 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
                     .get(springSessionKey, AuthenticationConstants.SESSION_ATTR_ACCESS_TOKEN)
                     .switchIfEmpty(Mono.error(new RuntimeException("AccessToken no encontrado en sesión")))
                     .flatMap(accessTokenObj -> {
-                        String accessToken = accessTokenObj.toString();
-                        // Limpiamos las comillas que añade el serializador JSON
-                        if (accessToken.startsWith("\"") && accessToken.endsWith("\"")) {
-                            accessToken = accessToken.substring(1, accessToken.length() - 1);
-                        }
-
+                        String accessToken = JsonStringCleaner.removeQuotes(accessTokenObj.toString());
                         final String finalAccessToken = accessToken;
 
                         if (finalAccessToken == null || finalAccessToken.trim().isEmpty() || !finalAccessToken.startsWith(AuthenticationConstants.GOOGLE_TOKEN_PREFIX)) {
@@ -93,10 +89,7 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
                                 .get(springSessionKey, AuthenticationConstants.SESSION_ATTR_REFRESH_TOKEN)
                                 .defaultIfEmpty("")
                                 .flatMap(refreshTokenObj -> {
-                                    String refreshToken = refreshTokenObj.toString();
-                                    if (refreshToken.startsWith("\"") && refreshToken.endsWith("\"")) {
-                                        refreshToken = refreshToken.substring(1, refreshToken.length() - 1);
-                                    }
+                                    String refreshToken = JsonStringCleaner.removeQuotes(refreshTokenObj.toString());
                                     logger.info("Refresh token: " + refreshToken);
 
                                     final String finalRefreshToken = refreshToken;
