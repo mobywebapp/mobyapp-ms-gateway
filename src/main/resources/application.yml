@@ -30,7 +30,7 @@ spring:
         webflux:
           routes:
             - id: login-service
-              uri: lb://MS-LOGIN
+              uri: lb://ms-login
               predicates:
                 - Path=/api/auth/**
             - id: calendar-service
