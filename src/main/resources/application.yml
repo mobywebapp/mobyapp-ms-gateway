@@ -61,11 +61,10 @@ spring:
               uri: lb://websocket
               predicates:
               - Path=/ws/**
-            # Drive y Tasks services comentados hasta que estén disponibles
-            # - id: drive-service
-            #   uri: lb://ms-drive
-            #   predicates:
-            #     - Path=/api/drive/**
+            - id: drive-service
+              uri: lb://ms-drive
+              predicates:
+              - Path=/api/drive/**
             - id: tasks-service
               uri: lb://ms-tasks
               predicates:
@@ -76,6 +75,7 @@ spring:
               args:
                   excludePaths:
                     - /api/auth/google/callback
+                    - /api/drive/**
                     - /api/auth/logout
                     - /api/auth/debug
                     - /api/user/**
