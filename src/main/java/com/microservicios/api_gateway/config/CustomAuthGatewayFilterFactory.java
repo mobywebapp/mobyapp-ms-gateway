@@ -74,22 +74,29 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
                             return unauthorizedResponse(requestPath, exchange, AuthenticationConstants.MSG_TOKEN_INVALID);
                         }
 
-                        log.info("AccessToken limpio extraído: {}", accessToken.length() > 20 ? accessToken.substring(0, 20) + "..." : accessToken);
+                        log.info("AccessToken encontrado y validado para la sesión {}", sessionId);
 
                         return sessionRepository.getRefreshToken(sessionId)
+                                .map(refreshToken -> {
+                                    log.info("RefreshToken encontrado para la sesión {}: {}", sessionId, refreshToken.length() > 10 ? refreshToken.substring(0, 10) + "..." : refreshToken);
+                                    return refreshToken;
+                                })
+                                .switchIfEmpty(Mono.fromRunnable(() -> log.warn("No se encontró RefreshToken para la sesión {}", sessionId)))
+                                .defaultIfEmpty("") // Procede con un string vacío si no hay refresh token
                                 .flatMap(refreshToken -> {
-                                    log.info("Refresh token: {}", refreshToken);
-
                                     ServerWebExchange mutatedExchange = exchange.mutate()
                                             .request(builder -> {
                                                 builder.header(AuthenticationConstants.HEADER_AUTHORIZATION, AuthenticationConstants.HEADER_BEARER_PREFIX + accessToken);
                                                 if (refreshToken != null && !refreshToken.trim().isEmpty()) {
+                                                    log.info("Inyectando RefreshToken en la cabecera para la sesión {}", sessionId);
                                                     builder.header(AuthenticationConstants.HEADER_REFRESH_TOKEN, refreshToken);
+                                                } else {
+                                                    log.warn("Procediendo sin inyectar RefreshToken en la cabecera para la sesión {}", sessionId);
                                                 }
                                             })
                                             .build();
 
-                                    log.info("Token inyectado correctamente al microservicio");
+                                    log.info("Inyectando AccessToken en la cabecera para la sesión {}", sessionId);
                                     return chain.filter(mutatedExchange);
                                 });
                     })

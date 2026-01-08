@@ -26,90 +26,88 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      server:
-        webflux:
-          routes:
-            - id: login-service
-              uri: lb://ms-login
-              predicates:
-                - Path=/api/auth/**
-            - id: calendar-service
-              uri: lb://ms-calendar
-              predicates:
-                - Path=/api/calendar/**
-            - id: user
-              uri: lb://user
-              predicates:
-              - Path=/api/user/**
-            - id: project
-              uri: lb://project
-              predicates:
-              - Path=/project/**
-            - id: georef
-              uri: lb://georef
-              predicates:
-              - Path=/locations/**
-            - id: airtable-service
-              uri: http://localhost:3000
-              predicates:
-              - Path=/api/airtable/**
-            - id: news-service
-              uri: lb://ms-news
-              predicates:
-                - Path=/api/contentful/**
-            - id: websocket
-              uri: lb://websocket
-              predicates:
-              - Path=/ws/**
-            - id: drive-service
-              uri: lb://ms-drive
-              predicates:
-              - Path=/api/drive/**
-            - id: tasks-service
-              uri: lb://ms-tasks
-              predicates:
-                - Path=/api/tasks/**
-          # Define los filtros globales
-          default-filters:
-            - name: CustomAuth
-              args:
-                  excludePaths:
-                    - /api/auth/google/callback
-                    - /api/drive/**
-                    - /api/auth/logout
-                    - /api/auth/debug
-                    - /api/user/**
-                    - /project/**
-                    - /georef/**
-                    - /api/airtable/**
-                    - /api/contentful/**
-                    - /ws/**
-           # Poné Dedupe al final (último filtro)
-            - name: DedupeResponseHeader
-              args:
-                    names:
-                      - Access-Control-Allow-Origin
-                      - Access-Control-Allow-Credentials
-                    strategy: RETAIN_FIRST
-          globalcors:
-            cors-configurations:
-              '[/api/**]':
-                allowedOrigins:
-                  - "https://test-api-google.netlify.app"
-                  - "http://localhost:4200"
-                  - "http://localhost:9000"
-                allowedMethods:
-                  - "GET"
-                  - "POST"
-                  - "PUT"
-                  - "DELETE"
-                  - "OPTIONS"
-                allowedHeaders:
-                  - "Content-Type"
-                  - "Authorization"
-                  - "X-Session-Id"
-                  - "X-Requested-With"
-                allowCredentials: true
+      routes:
+        - id: login-service
+          uri: lb://ms-login
+          predicates:
+            - Path=/api/auth/**
+        - id: calendar-service
+          uri: lb://ms-calendar
+          predicates:
+            - Path=/api/calendar/**
+        - id: user
+          uri: lb://user
+          predicates:
+          - Path=/api/user/**
+        - id: project
+          uri: lb://project
+          predicates:
+          - Path=/project/**
+        - id: georef
+          uri: lb://georef
+          predicates:
+          - Path=/locations/**
+        - id: airtable-service
+          uri: http://localhost:3000
+          predicates:
+          - Path=/api/airtable/**
+        - id: news-service
+          uri: lb://ms-news
+          predicates:
+            - Path=/api/contentful/**
+        - id: websocket
+          uri: lb://websocket
+          predicates:
+          - Path=/ws/**
+        - id: drive-service
+          uri: lb://ms-drive
+          predicates:
+          - Path=/api/drive/**
+        - id: tasks-service
+          uri: lb://ms-tasks
+          predicates:
+            - Path=/api/tasks/**
+      # Define los filtros globales
+      default-filters:
+        - name: CustomAuth
+          args:
+              excludePaths:
+                - /api/auth/google/callback
+                - /api/drive/**
+                - /api/auth/logout
+                - /api/auth/debug
+                - /api/user/**
+                - /project/**
+                - /georef/**
+                - /api/airtable/**
+                - /api/contentful/**
+                - /ws/**
+       # Poné Dedupe al final (último filtro)
+        - name: DedupeResponseHeader
+          args:
+                names:
+                  - Access-Control-Allow-Origin
+                  - Access-Control-Allow-Credentials
+                strategy: RETAIN_FIRST
+      globalcors:
+        cors-configurations:
+          '[/api/**]':
+            allowedOrigins:
+              - "https://test-api-google.netlify.app"
+              - "http://localhost:4200"
+              - "http://localhost:9000"
+            allowedMethods:
+              - "GET"
+              - "POST"
+              - "PUT"
+              - "DELETE"
+              - "OPTIONS"
+            allowedHeaders:
+              - "Content-Type"
+              - "Authorization"
+              - "X-Session-Id"
+              - "X-Requested-With"
+            allowCredentials: true
   data:
     redis:
       host: ${REDIS_HOST}

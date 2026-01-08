@@ -1,7 +1,10 @@
 package com.microservicios.api_gateway.repository;
 
+import com.microservicios.api_gateway.config.CustomAuthGatewayFilterFactory;
 import com.microservicios.api_gateway.constants.AuthenticationConstants;
 import com.microservicios.api_gateway.util.JsonStringCleaner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
@@ -10,6 +13,8 @@ import reactor.core.publisher.Mono;
 public class RedisSessionRepository implements SessionRepository {
 
     private final ReactiveRedisTemplate<String, String> redisTemplate;
+
+    private static final Logger log = LoggerFactory.getLogger(CustomAuthGatewayFilterFactory.class);
 
     public RedisSessionRepository(ReactiveRedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -21,7 +26,8 @@ public class RedisSessionRepository implements SessionRepository {
         return redisTemplate.opsForHash()
                 .get(springSessionKey, AuthenticationConstants.SESSION_ATTR_ACCESS_TOKEN)
                 .map(Object::toString)
-                .map(JsonStringCleaner::removeQuotes);
+                .map(JsonStringCleaner::removeQuotes)
+                .doOnNext(token -> log.info("Redis devolvió token={} para sesión={}", token, sessionId));
     }
 
     @Override
@@ -31,7 +37,7 @@ public class RedisSessionRepository implements SessionRepository {
                 .get(springSessionKey, AuthenticationConstants.SESSION_ATTR_REFRESH_TOKEN)
                 .map(Object::toString)
                 .map(JsonStringCleaner::removeQuotes)
-                .defaultIfEmpty("");
+                .doOnNext(token -> log.info("Redis devolvió refresh access token={} para sesión={}", token, sessionId));
     }
 
     private String buildSessionKey(String sessionId) {
