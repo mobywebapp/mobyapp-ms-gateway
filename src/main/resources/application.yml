@@ -54,7 +54,7 @@ spring:
         - id: news-service
           uri: lb://ms-news
           predicates:
-            - Path=/api/contentful/**
+            - Path=/contentful/**
         - id: websocket
           uri: lb://websocket
           predicates:
@@ -80,7 +80,7 @@ spring:
                 - /project/**
                 - /georef/**
                 - /api/airtable/**
-                - /api/contentful/**
+                - /contentful/**
                 - /ws/**
        # Poné Dedupe al final (último filtro)
         - name: DedupeResponseHeader
@@ -96,6 +96,8 @@ spring:
               - "https://test-api-google.netlify.app"
               - "http://localhost:4200"
               - "http://localhost:9000"
+              - "https://frontendsite-ten.vercel.app"
+              - "https://mobydigital.com"
             allowedMethods:
               - "GET"
               - "POST"
