@@ -35,8 +35,8 @@ build/
 # Properties
 **/.env
 !**/.env.example
-**/dev.properties
 !**/dev.properties.example
+**/src/main/resources/dev.properties
 
 # Carpetas de compilación
 bin/
