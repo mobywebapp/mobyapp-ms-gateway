@@ -128,7 +128,7 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
 
     private String decodeSessionId(String encodedSessionId) {
         try {
-            return new String(Base64.getDecoder().decode(encodedSessionId));
+            return new String(Base64.getUrlDecoder().decode(encodedSessionId));
         } catch (Exception e) {
             log.warn("Error al decodificar sessionId: {}", e.getMessage());
             throw new IllegalArgumentException("Invalid session ID encoding", e);
