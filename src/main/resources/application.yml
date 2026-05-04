@@ -91,13 +91,15 @@ spring:
                 strategy: RETAIN_FIRST
       globalcors:
         cors-configurations:
-          '[/api/**]':
+          '[/**]':
             allowedOrigins:
               - "https://test-api-google.netlify.app"
+              - "https://frontendsite-ten.vercel.app"
+              - "https://frontendsite-roan.vercel.app"
+              - "https://mobydigital.com"
+              - "https://www.mobydigital.com"
               - "http://localhost:4200"
               - "http://localhost:9000"
-              - "https://frontendsite-ten.vercel.app"
-              - "https://mobydigital.com"
             allowedMethods:
               - "GET"
               - "POST"
