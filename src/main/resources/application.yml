@@ -54,7 +54,7 @@ spring:
         - id: news-service
           uri: lb://ms-news
           predicates:
-            - Path=/contentful/**
+            - Path=/api/contentful/**
         - id: websocket
           uri: lb://websocket
           predicates:
@@ -73,14 +73,13 @@ spring:
           args:
               excludePaths:
                 - /api/auth/google/callback
-                - /api/drive/**
                 - /api/auth/logout
                 - /api/auth/debug
                 - /api/user/**
                 - /project/**
                 - /georef/**
                 - /api/airtable/**
-                - /contentful/**
+                - /api/contentful/**
                 - /ws/**
        # Poné Dedupe al final (último filtro)
         - name: DedupeResponseHeader
