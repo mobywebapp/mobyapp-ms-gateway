@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -18,12 +18,12 @@ public class SessionConfig {
 
     /**
      * Este bean configura el serializador para los atributos de la sesión en Redis.
-     * Cambiamos a JdkSerializationRedisSerializer para que sea compatible con ms-login,
-     * que usa la serialización binaria de Java por defecto.
+     * Usamos GenericJackson2JsonRedisSerializer para que sea compatible con ms-login,
+     * que también guarda los datos como JSON.
      */
     @Bean
     public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
-        return new JdkSerializationRedisSerializer();
+        return new GenericJackson2JsonRedisSerializer();
     }
 
     /**

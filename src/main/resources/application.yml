@@ -24,8 +24,16 @@ spring:
     web-application-type: reactive
   application:
     name: api-gateway
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 1MB
   cloud:
     gateway:
+      httpclient:
+        max-header-size: 16KB
+        connect-timeout: 5000
+        response-timeout: 30s
       routes:
         - id: login-service
           uri: lb://ms-login
