@@ -46,7 +46,7 @@ spring:
         - id: georef
           uri: lb://georef
           predicates:
-          - Path=/locations/**
+          - Path=/api/locations/**
         - id: airtable-service
           uri: http://localhost:3000
           predicates:
@@ -77,7 +77,7 @@ spring:
                 - /api/auth/debug
                 - /api/user/**
                 - /project/**
-                - /georef/**
+                - /api/locations/**
                 - /api/airtable/**
                 - /api/contentful/**
                 - /ws/**
