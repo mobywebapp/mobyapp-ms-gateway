@@ -48,7 +48,7 @@ spring:
           predicates:
           - Path=/api/locations/**
         - id: airtable-service
-          uri: http://localhost:3000
+          uri: ${AIRTABLE_URL:http://localhost:3000}
           predicates:
           - Path=/api/airtable/**
         - id: news-service
