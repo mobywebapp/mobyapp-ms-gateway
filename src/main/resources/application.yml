@@ -31,87 +31,101 @@ spring:
           uri: lb://ms-login
           predicates:
             - Path=/api/auth/**
+            
         - id: calendar-service
           uri: lb://ms-calendar
           predicates:
             - Path=/api/calendar/**
+          filters:
+            - name: CircuitBreaker 
+              args:
+                name: calendarCircuitBreaker
+                fallbackUri: forward:/fallback/calendar
+                
         - id: user
           uri: lb://user
           predicates:
-          - Path=/api/user/**
+            - Path=/user/** 
+            
         - id: project
           uri: lb://project
           predicates:
-          - Path=/project/**
+            - Path=/project/**
+            
         - id: georef
           uri: lb://georef
           predicates:
-          - Path=/locations/**
+            - Path=/locations/**
+            
         - id: airtable-service
-          uri: http://localhost:3000
+          uri: lb://ms-airtable 
           predicates:
-          - Path=/api/airtable/**
+            - Path=/api/airtable/**
+            
         - id: news-service
           uri: lb://ms-news
           predicates:
             - Path=/api/contentful/**
+            
         - id: websocket
           uri: lb://websocket
           predicates:
-          - Path=/ws/**
+            - Path=/ws/**
+            
         - id: drive-service
           uri: lb://ms-drive
           predicates:
-          - Path=/api/drive/**
+            - Path=/api/drive/**
+            
         - id: tasks-service
           uri: lb://ms-tasks
           predicates:
             - Path=/api/tasks/**
+          filters:
+            - name: CircuitBreaker 
+              args:
+                name: tasksCircuitBreaker
+                fallbackUri: forward:/fallback/tasks
+
       # Define los filtros globales
       default-filters:
         - name: CustomAuth
           args:
-              excludePaths:
-                - /api/auth/google/callback
-                - /api/auth/logout
-                - /api/auth/debug
-                - /api/user/**
-                - /project/**
-                - /georef/**
-                - /api/airtable/**
-                - /api/contentful/**
-                - /ws/**
-       # Poné Dedupe al final (último filtro)
+            excludePaths:
+              - /api/auth/google/callback
+              - /api/auth/logout
+              - /api/auth/debug
+              - /user/** 
+              - /project/**
+              - /georef/**
+              - /api/airtable/**
+              - /api/contentful/**
+              - /ws/**
+       
         - name: DedupeResponseHeader
           args:
-                names:
-                  - Access-Control-Allow-Origin
-                  - Access-Control-Allow-Credentials
-                strategy: RETAIN_FIRST
+            names:
+              - Access-Control-Allow-Origin
+              - Access-Control-Allow-Credentials
+            strategy: RETAIN_FIRST
+            
       globalcors:
         cors-configurations:
-          '[/**]':
+          '[/**]': #  Ampliado para cubrir todas las rutas
             allowedOrigins:
               - "https://test-api-google.netlify.app"
-              - "https://frontendsite-ten.vercel.app"
-              - "https://frontendsite-roan.vercel.app"
-              - "https://mobydigital.com"
-              - "https://www.mobydigital.com"
               - "http://localhost:4200"
               - "http://localhost:9000"
             allowedMethods:
               - "GET"
               - "POST"
               - "PUT"
-              - "PATCH"
               - "DELETE"
               - "OPTIONS"
             allowedHeaders:
-              - "Content-Type"
-              - "Authorization"
-              - "X-Session-Id"
-              - "X-Requested-With"
+              - "*" #  Permitir todos los headers
             allowCredentials: true
+            
   data:
     redis:
       host: ${REDIS_HOST}
@@ -131,8 +145,6 @@ spring:
       save-mode: on_set_attribute
 
 # Configuracion de Cookies (para OAuth y sesiones)
-# En producción (Railway/HTTPS): cookie.secure=true y cookie.same-site=None
-# En desarrollo (localhost): cookie.secure=false y cookie.same-site=Lax
 cookie:
   secure: ${COOKIE_SECURE:false}
   same-site: ${COOKIE_SAME_SITE:Lax}

@@ -12,6 +12,7 @@ import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFac
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.cors.reactive.CorsUtils; // Import necesario para validar el OPTIONS
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import java.util.Base64;
@@ -34,6 +35,13 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
     @Override
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
+            
+            // Si es una petición Pre-flight (OPTIONS), pasa de largo al filtro CORS
+            if (CorsUtils.isPreFlightRequest(exchange.getRequest())) {
+                log.info("Petición Pre-flight detectada (OPTIONS). Pasando de largo al filtro CORS.");
+                return chain.filter(exchange);
+            }
+
             String requestPath = exchange.getRequest().getURI().getPath();
             log.info("Recibida solicitud para la URL {}", exchange.getRequest().getURI());
 
@@ -43,18 +51,16 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
                 return chain.filter(exchange);
             }
 
-            //Lee cookie automatica del navegador
+            // Lee cookie automática del navegador
             HttpCookie sessionCookie = exchange.getRequest()
                     .getCookies().getFirst(AuthenticationConstants.SESSION_COOKIE_NAME);
 
-
-
             if (sessionCookie == null) {
                 log.warn("Petición rechazada: cookie JSESSIONID ausente. Usuario no autenticado.");
-                return unauthorizedResponse(requestPath,exchange, AuthenticationConstants.MSG_SESSION_NOT_FOUND);
+                return unauthorizedResponse(requestPath, exchange, AuthenticationConstants.MSG_SESSION_NOT_FOUND);
             }
 
-            // Extraemos el sessionId de la cookie (Spring Session lo genera automáticamente)
+            // Extraemos el sessionId de la cookie
             String encodedSessionId = sessionCookie.getValue();
             log.info("SessionId codificado encontrado en cookie: {}", encodedSessionId);
 
@@ -69,36 +75,40 @@ public class CustomAuthGatewayFilterFactory extends AbstractGatewayFilterFactory
             return sessionRepository.getAccessToken(sessionId)
                     .switchIfEmpty(Mono.error(new RuntimeException("AccessToken no encontrado en sesión")))
                     .flatMap(accessToken -> {
-                        if (!tokenValidator.isValid(accessToken)) {
-                            log.warn("AccessToken no válido en la sesión Redis. Token: {}", accessToken);
-                            return unauthorizedResponse(requestPath, exchange, AuthenticationConstants.MSG_TOKEN_INVALID);
-                        }
+                        
+                        // Evaluación reactiva del token
+                        return tokenValidator.isValid(accessToken).flatMap(isValid -> {
+                            if (!isValid) {
+                                log.warn("AccessToken no válido en la sesión Redis o rechazado por Google. Token: {}", accessToken);
+                                return unauthorizedResponse(requestPath, exchange, AuthenticationConstants.MSG_TOKEN_INVALID);
+                            }
 
-                        log.info("AccessToken encontrado y validado para la sesión {}", sessionId);
+                            log.info("AccessToken encontrado y validado correctamente para la sesión {}", sessionId);
 
-                        return sessionRepository.getRefreshToken(sessionId)
-                                .map(refreshToken -> {
-                                    log.info("RefreshToken encontrado para la sesión {}: {}", sessionId, refreshToken.length() > 10 ? refreshToken.substring(0, 10) + "..." : refreshToken);
-                                    return refreshToken;
-                                })
-                                .switchIfEmpty(Mono.fromRunnable(() -> log.warn("No se encontró RefreshToken para la sesión {}", sessionId)))
-                                .defaultIfEmpty("") // Procede con un string vacío si no hay refresh token
-                                .flatMap(refreshToken -> {
-                                    ServerWebExchange mutatedExchange = exchange.mutate()
-                                            .request(builder -> {
-                                                builder.header(AuthenticationConstants.HEADER_AUTHORIZATION, AuthenticationConstants.HEADER_BEARER_PREFIX + accessToken);
-                                                if (refreshToken != null && !refreshToken.trim().isEmpty()) {
-                                                    log.info("Inyectando RefreshToken en la cabecera para la sesión {}", sessionId);
-                                                    builder.header(AuthenticationConstants.HEADER_REFRESH_TOKEN, refreshToken);
-                                                } else {
-                                                    log.warn("Procediendo sin inyectar RefreshToken en la cabecera para la sesión {}", sessionId);
-                                                }
-                                            })
-                                            .build();
+                            return sessionRepository.getRefreshToken(sessionId)
+                                    .map(refreshToken -> {
+                                        log.info("RefreshToken encontrado para la sesión {}: {}", sessionId, refreshToken.length() > 10 ? refreshToken.substring(0, 10) + "..." : refreshToken);
+                                        return refreshToken;
+                                    })
+                                    .switchIfEmpty(Mono.fromRunnable(() -> log.warn("No se encontró RefreshToken para la sesión {}", sessionId)))
+                                    .defaultIfEmpty("") // Procede con un string vacío si no hay refresh token
+                                    .flatMap(refreshToken -> {
+                                        ServerWebExchange mutatedExchange = exchange.mutate()
+                                                .request(builder -> {
+                                                    builder.header(AuthenticationConstants.HEADER_AUTHORIZATION, AuthenticationConstants.HEADER_BEARER_PREFIX + accessToken);
+                                                    if (refreshToken != null && !refreshToken.trim().isEmpty()) {
+                                                        log.info("Inyectando RefreshToken en la cabecera para la sesión {}", sessionId);
+                                                        builder.header(AuthenticationConstants.HEADER_REFRESH_TOKEN, refreshToken);
+                                                    } else {
+                                                        log.warn("Procediendo sin inyectar RefreshToken en la cabecera para la sesión {}", sessionId);
+                                                    }
+                                                })
+                                                .build();
 
-                                    log.info("Inyectando AccessToken en la cabecera para la sesión {}", sessionId);
-                                    return chain.filter(mutatedExchange);
-                                });
+                                        log.info("Inyectando AccessToken en la cabecera para la sesión {}", sessionId);
+                                        return chain.filter(mutatedExchange);
+                                    });
+                        });
                     })
                     .onErrorResume(error -> {
                         log.warn("Error al procesar sesión: {}", error.getMessage());
