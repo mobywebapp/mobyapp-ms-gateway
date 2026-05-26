@@ -6,58 +6,44 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.ReactiveHashOperations;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveRedisOperations;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RedisSessionRepositoryTest {
 
+    // Cambiamos ReactiveRedisTemplate<String, String> por ReactiveRedisOperations<String, Object>
     @Mock
-    private ReactiveRedisTemplate<String, String> redisTemplate;
+    private ReactiveRedisOperations<String, Object> redisOperations;
 
     @Mock
     private ReactiveHashOperations<String, Object, Object> hashOperations;
 
-    private SessionRepository sessionRepository;
+    private RedisSessionRepository sessionRepository;
 
     @BeforeEach
     void setUp() {
-        when(redisTemplate.opsForHash()).thenReturn(hashOperations);
-        sessionRepository = new RedisSessionRepository(redisTemplate);
+        when(redisOperations.opsForHash()).thenReturn(hashOperations);
+        sessionRepository = new RedisSessionRepository(redisOperations);
     }
 
     @Test
-    void getAccessToken_existingToken_shouldReturnCleanToken() {
+    void getAccessToken_existingToken_shouldReturnToken() {
         String sessionId = "test-session-123";
         String redisKey = "spring:session:sessions:" + sessionId;
-        String tokenWithQuotes = "\"ya29.tokenxxx\"";
+        String token = "ya29.tokenxxx"; // Ya no testeamos comillas porque Redis devuelve objetos JSON limpios
 
         when(hashOperations.get(redisKey, "sessionAttr:accessToken"))
-                .thenReturn(Mono.just(tokenWithQuotes));
+                .thenReturn(Mono.just(token));
 
         StepVerifier.create(sessionRepository.getAccessToken(sessionId))
                 .expectNext("ya29.tokenxxx")
                 .verifyComplete();
 
         verify(hashOperations).get(redisKey, "sessionAttr:accessToken");
-    }
-
-    @Test
-    void getAccessToken_tokenWithoutQuotes_shouldReturnAsIs() {
-        String sessionId = "test-session-123";
-        String redisKey = "spring:session:sessions:" + sessionId;
-        String tokenWithoutQuotes = "ya29.tokenxxx";
-
-        when(hashOperations.get(redisKey, "sessionAttr:accessToken"))
-                .thenReturn(Mono.just(tokenWithoutQuotes));
-
-        StepVerifier.create(sessionRepository.getAccessToken(sessionId))
-                .expectNext("ya29.tokenxxx")
-                .verifyComplete();
     }
 
     @Test
@@ -73,10 +59,10 @@ class RedisSessionRepositoryTest {
     }
 
     @Test
-    void getRefreshToken_existingToken_shouldReturnCleanToken() {
+    void getRefreshToken_existingToken_shouldReturnToken() {
         String sessionId = "test-session-123";
         String redisKey = "spring:session:sessions:" + sessionId;
-        String refreshToken = "\"1//refresh-token-xxx\"";
+        String refreshToken = "1//refresh-token-xxx";
 
         when(hashOperations.get(redisKey, "sessionAttr:refreshToken"))
                 .thenReturn(Mono.just(refreshToken));
@@ -87,7 +73,7 @@ class RedisSessionRepositoryTest {
     }
 
     @Test
-    void getRefreshToken_notFound_shouldReturnEmptyString() {
+    void getRefreshToken_notFound_shouldReturnEmpty() {
         String sessionId = "test-session-123";
         String redisKey = "spring:session:sessions:" + sessionId;
 
@@ -95,8 +81,7 @@ class RedisSessionRepositoryTest {
                 .thenReturn(Mono.empty());
 
         StepVerifier.create(sessionRepository.getRefreshToken(sessionId))
-                .expectNext("")
-                .verifyComplete();
+                .verifyComplete(); // Ahora devuelve Mono.empty() directamente
     }
 
     @Test

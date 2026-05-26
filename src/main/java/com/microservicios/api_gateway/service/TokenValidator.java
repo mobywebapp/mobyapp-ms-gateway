@@ -1,6 +1,7 @@
 package com.microservicios.api_gateway.service;
 
-public interface TokenValidator {
+import reactor.core.publisher.Mono;
 
-    boolean isValid(String token);
+public interface TokenValidator {
+    Mono<Boolean> isValid(String token);
 }
