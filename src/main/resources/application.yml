@@ -39,58 +39,58 @@ spring:
           uri: lb://ms-login
           predicates:
             - Path=/api/auth/**
-            
+
         - id: calendar-service
           uri: lb://ms-calendar
           predicates:
             - Path=/api/calendar/**
           filters:
-            - name: CircuitBreaker 
+            - name: CircuitBreaker
               args:
                 name: calendarCircuitBreaker
                 fallbackUri: forward:/fallback/calendar
-                
+
         - id: user
           uri: lb://user
           predicates:
-            - Path=/user/** 
-            
+            - Path=/api/user/**
+
         - id: project
           uri: lb://project
           predicates:
             - Path=/project/**
-            
+
         - id: georef
           uri: lb://georef
           predicates:
-            - Path=/locations/**
-            
+            - Path=/api/locations/**
+
         - id: airtable-service
-          uri: lb://ms-airtable 
+          uri: ${AIRTABLE_URL:http://localhost:3000}
           predicates:
             - Path=/api/airtable/**
-            
+
         - id: news-service
           uri: lb://ms-news
           predicates:
             - Path=/api/contentful/**
-            
+
         - id: websocket
           uri: lb://websocket
           predicates:
             - Path=/ws/**
-            
+
         - id: drive-service
           uri: lb://ms-drive
           predicates:
             - Path=/api/drive/**
-            
+
         - id: tasks-service
           uri: lb://ms-tasks
           predicates:
             - Path=/api/tasks/**
           filters:
-            - name: CircuitBreaker 
+            - name: CircuitBreaker
               args:
                 name: tasksCircuitBreaker
                 fallbackUri: forward:/fallback/tasks
@@ -103,37 +103,45 @@ spring:
               - /api/auth/google/callback
               - /api/auth/logout
               - /api/auth/debug
-              - /user/** 
+              - /api/user/**
               - /project/**
-              - /georef/**
+              - /api/locations/**
               - /api/airtable/**
               - /api/contentful/**
               - /ws/**
-       
+
         - name: DedupeResponseHeader
           args:
             names:
               - Access-Control-Allow-Origin
               - Access-Control-Allow-Credentials
             strategy: RETAIN_FIRST
-            
+
       globalcors:
         cors-configurations:
-          '[/**]': #  Ampliado para cubrir todas las rutas
+          '[/**]':
             allowedOrigins:
               - "https://test-api-google.netlify.app"
+              - "https://frontendsite-ten.vercel.app"
+              - "https://frontendsite-roan.vercel.app"
+              - "https://mobydigital.com"
+              - "https://www.mobydigital.com"
               - "http://localhost:4200"
               - "http://localhost:9000"
             allowedMethods:
               - "GET"
               - "POST"
               - "PUT"
+              - "PATCH"
               - "DELETE"
               - "OPTIONS"
             allowedHeaders:
-              - "*" #  Permitir todos los headers
+              - "Content-Type"
+              - "Authorization"
+              - "X-Session-Id"
+              - "X-Requested-With"
             allowCredentials: true
-            
+
   data:
     redis:
       host: ${REDIS_HOST}
