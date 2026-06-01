@@ -1,47 +1,37 @@
-# Multi-stage build para API Gateway
-
 # Stage 1: Build
-FROM maven:3.9-eclipse-temurin-17-alpine AS build
+FROM maven:3.9.6-eclipse-temurin-17-alpine AS build
 WORKDIR /app
 
-# Copiar archivos de configuración de Maven
+# 1. Cachear dependencias y plugins
 COPY pom.xml .
-COPY .mvn .mvn
-COPY mvnw .
-
-# Descargar dependencias
 RUN mvn dependency:go-offline -B
 
-# Copiar código fuente
+# 2. Compilación
 COPY src ./src
-
-# Compilar la aplicación
 RUN mvn clean package -DskipTests
 
 # Stage 2: Runtime
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-# Crear usuario no-root
+RUN apk add --no-cache curl
+
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
-# Copiar el JAR compilado
 COPY --from=build /app/target/*.jar app.jar
 
-# Cambiar permisos
 RUN chown -R appuser:appgroup /app
-
 USER appuser
 
-# Exponer puerto
-EXPOSE ${GATEWAY_PORT:-8080}
+# Variables con valores por defecto para pruebas locales
+ENV GATEWAY_PORT=8080
+ENV URL_EUREKA=http://eureka:8761/eureka/
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
 
-# Variables de entorno
-ENV JAVA_OPTS="-Xmx512m -Xms256m"
+EXPOSE 8080
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:${GATEWAY_PORT:-8080}/actuator/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:${GATEWAY_PORT}/actuator/health || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
