@@ -12,7 +12,6 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.session.data.redis.ReactiveRedisSessionRepository;
 import org.springframework.session.data.redis.config.ConfigureRedisAction;
 
-
 @Configuration
 public class SessionConfig {
 
@@ -26,22 +25,16 @@ public class SessionConfig {
         return new GenericJackson2JsonRedisSerializer();
     }
 
-    /**
-     * Configura ReactiveRedisOperations para Spring Session.
-     * Esto asegura que el ReactiveRedisTemplate interno de Spring Session utilice
-     * el JdkSerializationRedisSerializer para la serialización/deserialización
-     * de los atributos de sesión, haciéndolo compatible con ms-login.
-     */
     @Bean
     public ReactiveRedisOperations<String, Object> sessionRedisOperations(ReactiveRedisConnectionFactory connectionFactory) {
         StringRedisSerializer keySerializer = new StringRedisSerializer();
-        RedisSerializer<Object> valueSerializer = springSessionDefaultRedisSerializer(); // Usa nuestro serializador JSON
+        RedisSerializer<Object> valueSerializer = springSessionDefaultRedisSerializer();
 
         RedisSerializationContext<String, Object> serializationContext = RedisSerializationContext
                 .<String, Object>newSerializationContext(keySerializer)
                 .value(valueSerializer)
-                .hashKey(keySerializer) // Las claves dentro del hash de la sesión (ej. "sessionAttr:accessToken")
-                .hashValue(valueSerializer) // Los valores de los atributos de la sesión
+                .hashKey(keySerializer)
+                .hashValue(valueSerializer)
                 .build();
 
         return new ReactiveRedisTemplate<>(connectionFactory, serializationContext);
@@ -49,10 +42,7 @@ public class SessionConfig {
 
     @Bean
     public ReactiveRedisSessionRepository reactiveSessionRepository(ReactiveRedisOperations<String, Object> sessionRedisOperations) {
-        ReactiveRedisSessionRepository sessionRepository = new ReactiveRedisSessionRepository(sessionRedisOperations);
-        // Opcional: configurar prefijos u otros ajustes si fuera necesario
-        // sessionRepository.setRedisKeyPrefix(AuthenticationConstants.SPRING_SESSION_KEY_PREFIX);
-        return sessionRepository;
+        return new ReactiveRedisSessionRepository(sessionRedisOperations);
     }
 
     @Bean

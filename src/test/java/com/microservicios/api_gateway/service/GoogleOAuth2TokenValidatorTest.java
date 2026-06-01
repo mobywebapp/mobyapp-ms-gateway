@@ -2,51 +2,49 @@ package com.microservicios.api_gateway.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.test.StepVerifier;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class GoogleOAuth2TokenValidatorTest {
 
-    private TokenValidator validator;
+    @Mock
+    private WebClient.Builder webClientBuilderMock;
+
+    @Mock
+    private WebClient webClientMock;
+
+    @Mock
+    private WebClient.RequestHeadersUriSpec requestHeadersUriSpecMock;
+
+    @Mock
+    private WebClient.ResponseSpec responseSpecMock;
+
+    private GoogleOAuth2TokenValidator validator;
 
     @BeforeEach
     void setUp() {
-        validator = new GoogleOAuth2TokenValidator();
+        when(webClientBuilderMock.build()).thenReturn(webClientMock);
+        validator = new GoogleOAuth2TokenValidator(webClientBuilderMock);
     }
 
     @Test
-    void isValid_validGoogleToken_shouldReturnTrue() {
-        assertTrue(validator.isValid("ya29.a0AfH6SMBxxxxxxxxxxxxxx"));
+    void isValid_NullToken_ReturnsFalse() {
+        StepVerifier.create(validator.isValid(null))
+                .expectNext(false)
+                .verifyComplete();
     }
 
     @Test
-    void isValid_nullToken_shouldReturnFalse() {
-        assertFalse(validator.isValid(null));
-    }
-
-    @Test
-    void isValid_emptyToken_shouldReturnFalse() {
-        assertFalse(validator.isValid(""));
-    }
-
-    @Test
-    void isValid_blankToken_shouldReturnFalse() {
-        assertFalse(validator.isValid("   "));
-    }
-
-    @Test
-    void isValid_tokenWithoutPrefix_shouldReturnFalse() {
-        assertFalse(validator.isValid("invalidtoken123"));
-    }
-
-    @Test
-    void isValid_wrongPrefix_shouldReturnFalse() {
-        assertFalse(validator.isValid("Bearer ya29.tokenxxx"));
-    }
-
-    @Test
-    void isValid_onlyPrefix_shouldReturnTrue() {
-        // Técnicamente válido según nuestra lógica actual
-        assertTrue(validator.isValid("ya29."));
+    void isValid_EmptyToken_ReturnsFalse() {
+        StepVerifier.create(validator.isValid("   "))
+                .expectNext(false)
+                .verifyComplete();
     }
 }
