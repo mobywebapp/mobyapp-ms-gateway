@@ -103,7 +103,6 @@ spring:
               - /api/auth/google/callback
               - /api/auth/logout
               - /api/auth/debug
-              - /api/user/**
               - /project/**
               - /api/locations/**
               - /api/airtable/**
